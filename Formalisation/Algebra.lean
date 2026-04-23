@@ -30,6 +30,17 @@ structure Ring {α : Type} (R : Set α) (add mul : α → α → α) where
   right_distrib : ∀ a b c, mul (add a b) c = add (mul a c) (mul b c)
 
 
+def isId (G : Group X op) (e : α) : Prop :=
+  e ∈ G.set ∧
+  (∀ a, op e a = a) ∧
+  (∀ a, op a e = a)
+
+
+def isInv (G : Group X op) (a b : α) : Prop :=
+  op a b = G.id ∧
+  op b a = G.id
+
+
 lemma groupLMul (_ : Group X op) : ∀ a b c, a = b → op c a = op c b := by
   intro a b c hab
   rw [hab]
@@ -51,17 +62,6 @@ lemma groupLCancel (G : Group X op) : ∀ a b c, op c a = op c b → a = b := by
   rw [hc'.right] at h''
   rw [(G.op_id a).left, (G.op_id b).left] at h''
   exact h''
-
-
-def isId (G : Group X op) (e : α) : Prop :=
-  e ∈ G.set ∧
-  (∀ a, op e a = a) ∧
-  (∀ a, op a e = a)
-
-
-def isInv (G : Group X op) (a b : α) : Prop :=
-  op a b = G.id ∧
-  op b a = G.id
 
 
 lemma groupUniqueId (G : Group X op) : ∀ e e', isId G e → isId G e' → e = e' := by
@@ -90,7 +90,6 @@ lemma groupSideInv (G : Group X op) : ∀ a b, op a b = G.id → op b a = G.id :
   rw [(G.inv_is_inv b).left]
 
 
-
 lemma groupUniqueInv (G : Group X op) : ∀ a b b', isInv G a b → isInv G a b' → b = b' := by
   intro a b b' hbinv hb'inv
   rw [isInv] at hbinv hb'inv
@@ -111,6 +110,11 @@ lemma groupInvInv (G : Group X op) : ∀ a, G.inv (G.inv a) = a := by
   rw [←h'']
   apply groupUniqueInv G a' (G.inv a') a (G.inv_is_inv a') ⟨h', h⟩
 
+
+lemma groupIdInv (G : Group X op) : G.inv G.id = G.id := by
+  apply groupUniqueInv G G.id (G.inv G.id) G.id (G.inv_is_inv G.id)
+  rw [isInv]
+  exact G.op_id G.id
 
 
 def isSubgroup (H G : Group X op) (_ : H.set ⊆ G.set) : Prop :=
