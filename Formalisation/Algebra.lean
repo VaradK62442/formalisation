@@ -8,7 +8,7 @@ import Mathlib.Tactic.Ring
 
 namespace Algebra
 
-variable {α : Type} {X : Set α} {op : α → α → α}
+variable {α : Type} {X : Set α} {op op' : α → α → α}
 
 structure Group {α : Type} (G : Set α) (op : α → α → α) where
   set : Set α
@@ -123,7 +123,7 @@ def isSubgroup (H G : Group X op) (_ : H.set ⊆ G.set) : Prop :=
   (∀ a, a ∈ H.set → G.inv a ∈ H.set)
 
 
-lemma subgroupEqId (G H : Group X op) (h : H.set ⊆ G.set) : H.id = G.id := by
+lemma subsetEqId (G H : Group X op) (h : H.set ⊆ G.set) : H.id = G.id := by
   apply by_contradiction
   intro hneqid
   have hidHid : isId G H.id := by
@@ -165,12 +165,28 @@ theorem subgroupTest (H G : Group X op) (h : H.set ⊆ G.set) : isSubgroup H G h
     rw [isSubgroup]
     obtain ⟨hnempty, hclose⟩ := hclose
     constructor
-    · rw [← subgroupEqId G H h]
+    · rw [← subsetEqId G H h]
       exact H.id_mem
     · constructor
       · intro a b ha hb
-        sorry
-      · sorry
+        have h' : G.id ∈ H.set := by
+          rw [← subsetEqId G H h]
+          exact H.id_mem
+        have hbinv : (G.inv b) ∈ H.set := by
+          have hidop := hclose G.id b h' hb
+          rw [(G.op_id (G.inv b)).left] at hidop
+          exact hidop
+        have h'' : op a (G.inv (G.inv b)) ∈ H.set := by
+          apply hclose a (G.inv b) ha hbinv
+        rw [groupInvInv G b] at h''
+        exact h''
+      · intro a ha
+        have h' : G.id ∈ H.set := by
+          rw [← subsetEqId G H h]
+          exact H.id_mem
+        have hidop := hclose G.id a h' ha
+        rw [(G.op_id (G.inv a)).left] at hidop
+        exact hidop
 
 
 def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
