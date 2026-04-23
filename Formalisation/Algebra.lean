@@ -186,7 +186,10 @@ def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
     exact ⟨Int.zero_add a, Int.add_zero a⟩
   op_inv_exists := by
     intro a
+    apply Exists.intro (-a)
     exact ⟨Int.add_right_neg a, Int.add_left_neg a⟩
+  inv_is_inv := by
+    simp
 
 def groupPrimeIntegers (p : ℕ) (h : Nat.Prime p) :
   Group (Set.univ : Set (Fin p)) (
@@ -212,6 +215,11 @@ def groupPrimeIntegers (p : ℕ) (h : Nat.Prime p) :
     simp [Nat.mod_eq_of_lt a.isLt]
   op_inv_exists := by
     intro a
+    use ⟨(p - a.val) % p, by
+      apply Nat.mod_lt
+      exact Nat.Prime.pos h⟩
+    simp
+  inv_is_inv := by
     simp
 
 end Algebra
