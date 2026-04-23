@@ -17,7 +17,8 @@ structure Group {α : Type} (G : Set α) (op : α → α → α) where
   id_mem : id ∈ set
   op_assoc : ∀ a b c, op (op a b) c = op a (op b c)
   op_id : ∀ a, op id a = a ∧ op a id = a
-  op_inv : ∀ a, op a (inv a) = id ∧ op (inv a) a = id
+  op_inv_exists : ∀ a, ∃ b, op a b = id ∧ op b a = id
+  inv_is_inv : ∀ a, op a (inv a) = id ∧ op (inv a) a = id
 
 structure Ring {α : Type} (R : Set α) (add mul : α → α → α) where
   zero : α
@@ -34,13 +35,20 @@ lemma groupLMul (_ : Group X op) : ∀ a b c, a = b → op c a = op c b := by
   rw [hab]
 
 
+lemma groupRMul (_ : Group X op) : ∀ a b c, a = b → op a c = op b c := by
+  intro a b c hab
+  rw [hab]
+
+
 lemma groupLCancel (G : Group X op) : ∀ a b c, op c a = op c b → a = b := by
   intro a b c h
-  have h' : op (G.inv c) (op c a) = op (G.inv c) (op c b) := by
+  apply Exists.elim (G.op_inv_exists c)
+  intro c' hc'
+  have h' : op c' (op c a) = op c' (op c b) := by
     rw [h]
-  have h'' : op (op (G.inv c) c) a = op (op (G.inv c) c) b := by
-    exact G.op_assoc (G.inv c) c a ▸ G.op_assoc (G.inv c) c b ▸ h'
-  rw [(G.op_inv c).right] at h''
+  have h'' : op (op c' c) a = op (op c' c) b := by
+    exact G.op_assoc c' c a ▸ G.op_assoc c' c b ▸ h'
+  rw [hc'.right] at h''
   rw [(G.op_id a).left, (G.op_id b).left] at h''
   exact h''
 
@@ -49,6 +57,11 @@ def isId (G : Group X op) (e : α) : Prop :=
   e ∈ G.set ∧
   (∀ a, op e a = a) ∧
   (∀ a, op a e = a)
+
+
+def isInv (G : Group X op) (a b : α) : Prop :=
+  op a b = G.id ∧
+  op b a = G.id
 
 
 lemma groupUniqueId (G : Group X op) : ∀ e e', isId G e → isId G e' → e = e' := by
@@ -60,22 +73,44 @@ lemma groupUniqueId (G : Group X op) : ∀ e e', isId G e → isId G e' → e = 
     _ = e' := by rw [he_left e']
 
 
-lemma groupUniqueInv (G : Group X op) : ∀ a b b', op a b = G.id → op a b' = G.id → b = b' := by
+lemma groupSideInv (G : Group X op) : ∀ a b, op a b = G.id → op b a = G.id := by
+  intro a b hab
+  apply Exists.elim (G.op_inv_exists a)
+  intro a' ha'
+  have h : op a' (op a b) = op a' G.id := by
+    rw [hab]
+  have h' : op (op a' a) b = a' := by
+    rw [G.op_assoc a' a b]
+    rw [(G.op_id a').right] at h
+    exact h
+  apply groupRMul G (op (op a' a) b) a' (G.inv b) at h'
+  rw [G.op_assoc a' a b, G.op_assoc, G.op_assoc, (G.inv_is_inv b).left, (G.op_id a).right] at h'
+  apply groupLCancel G a (G.inv b) a' at h'
+  rw [h']
+  rw [(G.inv_is_inv b).left]
+
+
+
+lemma groupUniqueInv (G : Group X op) : ∀ a b b', isInv G a b → isInv G a b' → b = b' := by
   intro a b b' hbinv hb'inv
-  have hbinv' : op a b = op a b' := by
-    rw [hbinv, hb'inv]
-  have hbinv'' : op (G.inv a) (op a b) = op (G.inv a) (op a b') := by
-    rw [hbinv']
-  have hbinv''' : op (op (G.inv a) a) b = op (op (G.inv a) a) b' := by
-    exact G.op_assoc (G.inv a) a b ▸ G.op_assoc (G.inv a) a b' ▸ hbinv''
-  rw [(G.op_inv a).right] at hbinv'''
-  rw [(G.op_id b).left, (G.op_id b').left] at hbinv'''
-  exact hbinv'''
+  rw [isInv] at hbinv hb'inv
+  obtain ⟨hbinv, _⟩ := hbinv
+  obtain ⟨hb'inv, _⟩ := hb'inv
+  rw [←hbinv] at hb'inv
+  apply groupLCancel G b' b a at hb'inv
+  symm
+  exact hb'inv
 
 
 lemma groupInvInv (G : Group X op) : ∀ a, G.inv (G.inv a) = a := by
   intro a
-  sorry
+  apply Exists.elim (G.op_inv_exists a)
+  intro a' ⟨h, h'⟩
+  have h'' : a' = G.inv a := by
+    apply groupUniqueInv G a a' (G.inv a) ⟨h, h'⟩ (G.inv_is_inv a)
+  rw [←h'']
+  apply groupUniqueInv G a' (G.inv a') a (G.inv_is_inv a') ⟨h', h⟩
+
 
 
 def isSubgroup (H G : Group X op) (_ : H.set ⊆ G.set) : Prop :=
@@ -145,7 +180,7 @@ def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
   op_id := by
     intro a
     exact ⟨Int.zero_add a, Int.add_zero a⟩
-  op_inv := by
+  op_inv_exists := by
     intro a
     exact ⟨Int.add_right_neg a, Int.add_left_neg a⟩
 
@@ -171,7 +206,7 @@ def groupPrimeIntegers (p : ℕ) (h : Nat.Prime p) :
     simp only [zero_add, add_zero, and_self]
     apply Fin.ext
     simp [Nat.mod_eq_of_lt a.isLt]
-  op_inv := by
+  op_inv_exists := by
     intro a
     simp
 
