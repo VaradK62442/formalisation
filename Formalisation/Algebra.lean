@@ -10,7 +10,7 @@ namespace Algebra
 
 variable {α : Type} {X : Set α} {op op' : α → α → α}
 
-structure Group {α : Type} (G : Set α) (op : α → α → α) where
+structure Group (G : Set α) (op : α → α → α) where
   set : Set α
   id : α
   inv : α → α
@@ -19,15 +19,6 @@ structure Group {α : Type} (G : Set α) (op : α → α → α) where
   op_id : ∀ a, op id a = a ∧ op a id = a
   op_inv_exists : ∀ a, ∃ b, op a b = id ∧ op b a = id
   inv_is_inv : ∀ a, op a (inv a) = id ∧ op (inv a) a = id
-
-structure Ring {α : Type} (R : Set α) (add mul : α → α → α) where
-  zero : α
-  one : α
-  additive_group : Group R add
-  mul_assoc : ∀ a b c, mul (mul a b) c = mul a (mul b c)
-  mul_id : ∀ a, mul one a = a ∧ mul a one = a
-  left_distrib : ∀ a b c, mul a (add b c) = add (mul a b) (mul a c)
-  right_distrib : ∀ a b c, mul (add a b) c = add (mul a c) (mul b c)
 
 
 def isId (G : Group X op) (e : α) : Prop :=
@@ -187,6 +178,10 @@ theorem subgroupTest (H G : Group X op) (h : H.set ⊆ G.set) : isSubgroup H G h
         have hidop := hclose G.id a h' ha
         rw [(G.op_id (G.inv a)).left] at hidop
         exact hidop
+
+
+def isAbelian (_ : Group X op) : Prop :=
+  ∀ a b, op a b = op b a
 
 
 def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
