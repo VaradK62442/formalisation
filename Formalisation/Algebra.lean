@@ -17,7 +17,7 @@ structure Group (G : Set α) (op : α → α → α) where
   op_closed : ∀ a b, a ∈ G → b ∈ G → op a b ∈ G
   op_assoc : ∀ a b c, op (op a b) c = op a (op b c)
   op_id : ∀ a, op id a = a ∧ op a id = a
-  op_inv_exists : ∀ a, ∃ b, op a b = id ∧ op b a = id
+  op_inv_exists : ∀ a, ∃ b, b ∈ G ∧ op a b = id ∧ op b a = id
   inv_is_inv : ∀ a, op a (inv a) = id ∧ op (inv a) a = id
 
 
@@ -50,7 +50,7 @@ lemma groupLCancel (G : Group X op) : ∀ a b c, op c a = op c b → a = b := by
     rw [h]
   have h'' : op (op c' c) a = op (op c' c) b := by
     exact G.op_assoc c' c a ▸ G.op_assoc c' c b ▸ h'
-  rw [hc'.right] at h''
+  rw [hc'.right.right] at h''
   rw [(G.op_id a).left, (G.op_id b).left] at h''
   exact h''
 
@@ -95,7 +95,7 @@ lemma groupUniqueInv (G : Group X op) : ∀ a b b', isInv G a b → isInv G a b'
 lemma groupInvInv (G : Group X op) : ∀ a, G.inv (G.inv a) = a := by
   intro a
   apply Exists.elim (G.op_inv_exists a)
-  intro a' ⟨h, h'⟩
+  intro a' ⟨_, h, h'⟩
   have h'' : a' = G.inv a := by
     apply groupUniqueInv G a a' (G.inv a) ⟨h, h'⟩ (G.inv_is_inv a)
   rw [←h'']
@@ -200,7 +200,7 @@ def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
   op_inv_exists := by
     intro a
     apply Exists.intro (-a)
-    exact ⟨Int.add_right_neg a, Int.add_left_neg a⟩
+    exact ⟨Set.mem_univ (-a), Int.add_right_neg a, Int.add_left_neg a⟩
   inv_is_inv := by
     simp
 
