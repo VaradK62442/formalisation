@@ -14,6 +14,7 @@ structure Group (G : Set α) (op : α → α → α) where
   id : α
   inv : α → α
   id_mem : id ∈ G
+  op_closed : ∀ a b, a ∈ G → b ∈ G → op a b ∈ G
   op_assoc : ∀ a b c, op (op a b) c = op a (op b c)
   op_id : ∀ a, op id a = a ∧ op a id = a
   op_inv_exists : ∀ a, ∃ b, op a b = id ∧ op b a = id
@@ -188,6 +189,9 @@ def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
   inv := fun a => -a
   id_mem := by
     exact Set.mem_univ 0
+  op_closed := by
+    intros a b ha hb
+    exact Set.mem_univ (a + b)
   op_assoc := by
     exact Int.add_assoc
   op_id := by
@@ -212,6 +216,9 @@ def groupPrimeIntegers (p : ℕ) (h : Nat.Prime p) :
     exact Nat.Prime.pos h⟩
   id_mem := by
     exact Set.mem_univ (⟨0, by exact Nat.Prime.pos h⟩ : Fin p)
+  op_closed := by
+    intros a b ha hb
+    exact Set.mem_univ _
   op_assoc := by
     intro a b c
     simp
