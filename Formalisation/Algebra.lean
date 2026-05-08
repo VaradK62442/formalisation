@@ -8,21 +8,20 @@ import Mathlib.Tactic.Ring
 
 namespace Algebra
 
-variable {α : Type} {X : Set α} {op op' : α → α → α}
+variable {α : Type} {X Y : Set α} {op op' : α → α → α}
 
 structure Group (G : Set α) (op : α → α → α) where
-  set : Set α
   id : α
   inv : α → α
-  id_mem : id ∈ set
+  id_mem : id ∈ G
   op_assoc : ∀ a b c, op (op a b) c = op a (op b c)
   op_id : ∀ a, op id a = a ∧ op a id = a
   op_inv_exists : ∀ a, ∃ b, op a b = id ∧ op b a = id
   inv_is_inv : ∀ a, op a (inv a) = id ∧ op (inv a) a = id
 
 
-def isId (G : Group X op) (e : α) : Prop :=
-  e ∈ G.set ∧
+def isId (_ : Group X op) (e : α) : Prop :=
+  e ∈ X ∧
   (∀ a, op e a = a) ∧
   (∀ a, op a e = a)
 
@@ -108,13 +107,13 @@ lemma groupIdInv (G : Group X op) : G.inv G.id = G.id := by
   exact G.op_id G.id
 
 
-def isSubgroup (H G : Group X op) (_ : H.set ⊆ G.set) : Prop :=
-  G.id ∈ H.set ∧
-  (∀ a b, a ∈ H.set → b ∈ H.set → op a b ∈ H.set) ∧
-  (∀ a, a ∈ H.set → G.inv a ∈ H.set)
+def isSubgroup (_ : Group Y op) (G : Group X op) (_ : Y ⊆ X) : Prop :=
+  G.id ∈ Y ∧
+  (∀ a b, a ∈ Y → b ∈ Y → op a b ∈ Y) ∧
+  (∀ a, a ∈ Y → G.inv a ∈ Y)
 
 
-lemma subsetEqId (G H : Group X op) (h : H.set ⊆ G.set) : H.id = G.id := by
+lemma subsetEqId (G : Group X op) (H : Group Y op) (h : Y ⊆ X) : H.id = G.id := by
   apply by_contradiction
   intro hneqid
   have hidHid : isId G H.id := by
@@ -138,8 +137,8 @@ lemma subsetEqId (G H : Group X op) (h : H.set ⊆ G.set) : H.id = G.id := by
   exact hneqid
 
 
-theorem subgroupTest (H G : Group X op) (h : H.set ⊆ G.set) : isSubgroup H G h ↔
-  H.set ≠ ∅ ∧ ∀ a b, a ∈ H.set → b ∈ H.set → op a (G.inv b) ∈ H.set := by
+theorem subgroupTest (H : Group Y op) (G : Group X op) (h : Y ⊆ X) : isSubgroup H G h ↔
+  Y ≠ ∅ ∧ ∀ a b, a ∈ Y → b ∈ Y → op a (G.inv b) ∈ Y := by
   apply Iff.intro
   · intro hHG -- a b ha hb
     obtain ⟨hid, hclose, hinv⟩ := hHG
@@ -160,19 +159,19 @@ theorem subgroupTest (H G : Group X op) (h : H.set ⊆ G.set) : isSubgroup H G h
       exact H.id_mem
     · constructor
       · intro a b ha hb
-        have h' : G.id ∈ H.set := by
+        have h' : G.id ∈ Y := by
           rw [← subsetEqId G H h]
           exact H.id_mem
-        have hbinv : (G.inv b) ∈ H.set := by
+        have hbinv : (G.inv b) ∈ Y := by
           have hidop := hclose G.id b h' hb
           rw [(G.op_id (G.inv b)).left] at hidop
           exact hidop
-        have h'' : op a (G.inv (G.inv b)) ∈ H.set := by
+        have h'' : op a (G.inv (G.inv b)) ∈ Y := by
           apply hclose a (G.inv b) ha hbinv
         rw [groupInvInv G b] at h''
         exact h''
       · intro a ha
-        have h' : G.id ∈ H.set := by
+        have h' : G.id ∈ Y := by
           rw [← subsetEqId G H h]
           exact H.id_mem
         have hidop := hclose G.id a h' ha
@@ -185,7 +184,6 @@ def isAbelian (_ : Group X op) : Prop :=
 
 
 def groupIntegers : Group (Set.univ : Set ℤ) (fun a b => a + b) where
-  set := Set.univ
   id := 0
   inv := fun a => -a
   id_mem := by
@@ -208,7 +206,6 @@ def groupPrimeIntegers (p : ℕ) (h : Nat.Prime p) :
       apply Nat.mod_lt
       exact Nat.Prime.pos h⟩
     ) where
-  set := Set.univ
   id := ⟨0, by exact Nat.Prime.pos h⟩
   inv := fun a => ⟨(p - a.val) % p, by
     apply Nat.mod_lt
