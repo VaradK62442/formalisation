@@ -18,6 +18,7 @@ structure Ring (X : Set α) (add mul : α → α → α) where
   additive_group : Algebra.Group X add
   abelian_group : Algebra.isAbelian additive_group
   id_mem : one ∈ X
+  mul_closed : ∀ a b, a ∈ X → b ∈ X → mul a b ∈ X
   mul_assoc : ∀ a b c, mul (mul a b) c = mul a (mul b c)
   mul_id : ∀ a, mul one a = a ∧ mul a one = a
   left_distrib : ∀ a b c, mul a (add b c) = add (mul a b) (mul a c)
@@ -75,7 +76,7 @@ def homomorphismKernel (_ : Ring X add mul) (S : Ring X' add' mul') (f : α → 
   { x | x ∈ X ∧ f x = S.additive_group.id }
 
 
-def ideal (R : Ring X add mul) (I : Set α) : Prop :=
+def ideal (R : Ring X add mul) (I : Set α) (_ : I ⊆ X) : Prop :=
   let G := R.additive_group
   G.id ∈ I ∧
   (∀ a b, a ∈ I → b ∈ I → add a b ∈ I) ∧
@@ -84,43 +85,66 @@ def ideal (R : Ring X add mul) (I : Set α) : Prop :=
   (∀ r a, r ∈ X → a ∈ I → mul a r ∈ I)
 
 
-theorem trivialIdeals (R : Ring X add mul) : ideal R {R.additive_group.id} ∧ ideal R X := by
-  constructor
-  · rw [ideal]
-    have h1 := Set.mem_singleton R.additive_group.id
-    have h2 :
-      ∀ a b, a ∈ ({R.additive_group.id} : Set α) →
-      b ∈ ({R.additive_group.id} : Set α) →
-      add a b ∈ ({R.additive_group.id} : Set α) := by
+theorem trivialIdeals (R : Ring X add mul) :
+  let htriv : {R.additive_group.id} ⊆ X := by
+    simp only [Set.singleton_subset_iff]
+    exact R.additive_group.id_mem
+  ideal R {R.additive_group.id} htriv ∧ ideal R X (le_refl X) := by
+    constructor
+    · rw [ideal]
+      have h1 := Set.mem_singleton R.additive_group.id
+      have h2 :
+        ∀ a b, a ∈ ({R.additive_group.id} : Set α) →
+        b ∈ ({R.additive_group.id} : Set α) →
+        add a b ∈ ({R.additive_group.id} : Set α) := by
+          intros a b ha hb
+          rw [Set.mem_singleton_iff] at ha hb
+          rw [ha, hb, (R.additive_group.op_id R.additive_group.id).left]
+          exact h1
+      have h3 :
+        ∀ a, a ∈ ({R.additive_group.id} : Set α) →
+        R.additive_group.inv a ∈ ({R.additive_group.id} : Set α) := by
+          intro a ha
+          rw [Set.mem_singleton_iff] at ha
+          rw [ha, Algebra.groupIdInv]
+          exact h1
+      have h4 :
+        ∀ r a, r ∈ X →
+        a ∈ ({R.additive_group.id} : Set α) →
+        mul r a ∈ ({R.additive_group.id} : Set α) := by
+          intros r a hr ha
+          rw [Set.mem_singleton_iff] at ha
+          rw [ha, (mulId R r).left]
+          exact h1
+      have h5 :
+        ∀ r a, r ∈ X →
+        a ∈ ({R.additive_group.id} : Set α) →
+        mul a r ∈ ({R.additive_group.id} : Set α) := by
+          intros r a hr ha
+          rw [Set.mem_singleton_iff] at ha
+          rw [ha, (mulId R r).right]
+          exact h1
+      exact ⟨h1, h2, h3, h4, h5⟩
+    · rw [ideal]
+      have h1 : (∀ a b, a ∈ X → b ∈ X → add a b ∈ X) := by
         intros a b ha hb
-        rw [Set.mem_singleton_iff] at ha hb
-        rw [ha, hb, (R.additive_group.op_id R.additive_group.id).left]
-        exact h1
-    have h3 :
-      ∀ a, a ∈ ({R.additive_group.id} : Set α) →
-      R.additive_group.inv a ∈ ({R.additive_group.id} : Set α) := by
+        exact R.additive_group.op_closed a b ha hb
+      have h2 : (∀ a, a ∈ X → R.additive_group.inv a ∈ X) := by
         intro a ha
-        rw [Set.mem_singleton_iff] at ha
-        rw [ha, Algebra.groupIdInv]
-        exact h1
-    have h4 :
-      ∀ r a, r ∈ X →
-      a ∈ ({R.additive_group.id} : Set α) →
-      mul r a ∈ ({R.additive_group.id} : Set α) := by
+        obtain ⟨a', a'_mem, ha_left, ha_right⟩ := (R.additive_group.op_inv_exists a)
+        have h : Algebra.isInv R.additive_group a a' := ⟨ha_left, ha_right⟩
+        rw [
+          Algebra.groupUniqueInv R.additive_group a a' (R.additive_group.inv a)
+          h (R.additive_group.inv_is_inv a)
+        ] at a'_mem
+        exact a'_mem
+      have h3 : (∀ r a, r ∈ X → a ∈ X → mul r a ∈ X) := by
         intros r a hr ha
-        rw [Set.mem_singleton_iff] at ha
-        rw [ha, (mulId R r).left]
-        exact h1
-    have h5 :
-      ∀ r a, r ∈ X →
-      a ∈ ({R.additive_group.id} : Set α) →
-      mul a r ∈ ({R.additive_group.id} : Set α) := by
+        exact R.mul_closed r a hr ha
+      have h4 : (∀ r a, r ∈ X → a ∈ X → mul a r ∈ X) := by
         intros r a hr ha
-        rw [Set.mem_singleton_iff] at ha
-        rw [ha, (mulId R r).right]
-        exact h1
-    exact ⟨h1, h2, h3, h4, h5⟩
-  · sorry
+        exact R.mul_closed a r ha hr
+      exact ⟨R.additive_group.id_mem, h1, h2, h3, h4⟩
 
 
 def unit (R : Ring X add mul) (u : α) : Prop :=
@@ -144,6 +168,34 @@ theorem unitUnique (R : Ring X add mul) :
 
 structure Field (R : Ring X add mul) (_ : isCommutative R) (_ : R.one ≠ R.additive_group.id) where
   all_units : ∀ x, x ∈ X ∧ x ≠ R.additive_group.id → unit R x
+
+
+theorem fieldCharacterisation
+  (R : Ring X add mul) (comm : isCommutative R) (nontrivial : R.one ≠ R.additive_group.id)
+  : Field R comm nontrivial ↔
+    (∀ I, ∀ hI : I ⊆ X, ideal R I hI → I = {R.additive_group.id} ∨ I = X) := by
+  apply Iff.intro
+  · intro K I hSub hIdeal
+    rw [ideal] at hIdeal
+    cases (Classical.em (I = {R.additive_group.id})) with
+    | inl h => exact Or.inl h
+    | inr h =>
+      have h1 : ∃ u, u ∈ I ∧ u ≠ R.additive_group.id := by
+        contrapose! h
+        ext u
+        simp only [Set.mem_singleton_iff]
+        exact ⟨h u, fun hx => hx ▸ hIdeal.left⟩
+      have h2 : R.one ∈ I := by
+        obtain ⟨u, u_in_I, u_nontrivial⟩ := h1
+        obtain ⟨u_unit, v, v_in_X, hu_left, hu_right⟩ := K.all_units u (
+          And.intro (Set.mem_of_subset_of_mem sorry u_in_I) u_nontrivial
+        )
+        obtain ⟨hIdMem, _, _, hmul_l, hmul_r⟩ := hIdeal
+        have := hmul_l v u v_in_X u_in_I
+        rw [hu_right] at this
+        exact this
+      sorry -- show that (1) = X → X ⊆ I → I = X
+  · sorry
 
 
 end GaloisTheory
