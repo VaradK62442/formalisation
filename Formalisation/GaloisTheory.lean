@@ -63,6 +63,7 @@ def isCommutative (_ : Ring X add mul) : Prop :=
 
 
 def ringHomomorphism (R : Ring X add mul) (S : Ring X' add' mul') (f : α → β) : Prop :=
+  (∀ a, a ∈ X → f a ∈ X') ∧
   (∀ a b, f (add a b) = add' (f a) (f b)) ∧
   (∀ a b, f (mul a b) = mul' (f a) (f b)) ∧
   f R.one = S.one
@@ -166,6 +167,20 @@ theorem unitUnique (R : Ring X add mul) :
     _ = v := by rw [(R.mul_id v).left]
 
 
+theorem homPreservesUnits
+  (R : Ring X add mul) (S : Ring X' add' mul') (f : α → β) (hHom : ringHomomorphism R S f)
+  : ∀ u, unit R u → unit S (f u) := by
+  intros u hu
+  obtain ⟨u_in_X, v, v_in_X, hu_left, hu_right⟩ := hu
+  obtain ⟨hClose, hAdd, hMul, hOne⟩ := hHom
+  have hv_left : mul' (f u) (f v) = S.one := by rw [← hMul u v, hu_left, hOne]
+  have hv_right : mul' (f v) (f u) = S.one := by rw [← hMul v u, hu_right, hOne]
+  constructor
+  · exact hClose u u_in_X
+  · apply Exists.intro (f v)
+    exact ⟨hClose v v_in_X, hv_left, hv_right⟩
+
+
 structure Field (R : Ring X add mul) (_ : isCommutative R) (_ : R.one ≠ R.additive_group.id) where
   all_units : ∀ x, x ∈ X ∧ x ≠ R.additive_group.id → unit R x
 
@@ -188,7 +203,7 @@ theorem fieldCharacterisation
       have h2 : R.one ∈ I := by
         obtain ⟨u, u_in_I, u_nontrivial⟩ := h1
         obtain ⟨u_unit, v, v_in_X, hu_left, hu_right⟩ := K.all_units u (
-          And.intro (Set.mem_of_subset_of_mem sorry u_in_I) u_nontrivial
+          And.intro (Set.mem_of_subset_of_mem hSub u_in_I) u_nontrivial
         )
         obtain ⟨hIdMem, _, _, hmul_l, hmul_r⟩ := hIdeal
         have := hmul_l v u v_in_X u_in_I
