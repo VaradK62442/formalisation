@@ -148,4 +148,31 @@ def k_functions_vspace (K : Field β) :
     ext
     rw [K.right_distrib]
 
+
+-- Exercise Sheet 2
+-- 1.
+lemma neg_norm_eq (V : NormedSpace X add rsmul) : ∀ x, V.norm (V.neg x) = V.norm x := by
+  intro x
+  have h := V.norm_scalar_mul x (-1)
+  rw [smul_neg_one V.toVectorSpace] at h
+  rw [abs_neg, abs_of_pos, one_mul] at h
+  · exact h
+  · simp
+
+theorem reverse_triangle_inequality (V : NormedSpace X add rsmul) :
+  ∀ x y, abs (V.norm x - V.norm y) ≤ V.norm (add x (V.neg y)) := by
+  intro x y
+  have h := V.norm_triangle (add x (V.neg y)) (y)
+  rw [V.add_assoc, V.add_comm (V.neg y) y, V.add_neg, V.add_zero] at h
+  have h' := add_le_add_right h (- V.norm y)
+  nth_rewrite 1 [add_comm] at h'
+  nth_rewrite 2 [add_comm] at h'
+  rw [add_assoc, add_neg_cancel, add_zero, ← sub_eq_add_neg] at h'
+  rw [abs_sub_le_iff]
+  constructor
+  · exact h'
+  · have h_sym := V.norm_triangle y (V.neg x)
+    have hn := neg_norm_eq V x
+    sorry
+
 end FunctionalAnalysis
