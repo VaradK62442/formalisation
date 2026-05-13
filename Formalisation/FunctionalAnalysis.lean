@@ -29,8 +29,8 @@ structure VectorSpace (X : Set α) (K : Field β)
 
 
 structure RVectorSpace (X : Set α)
-  (add : α → α → α) (smul : ℝ → α → α)
-  extends VectorSpace X (inferInstance : Field ℝ) add smul
+  (add : α → α → α) (rsmul : ℝ → α → α)
+  extends VectorSpace X (inferInstance : Field ℝ) add rsmul
 
 
 lemma vspace_add_equiv (V : VectorSpace X K add smul) : ∀ u v w, u = v ↔ add w u = add w v := by
@@ -162,15 +162,6 @@ lemma vspace_add_pm (V : VectorSpace X K add smul) : ∀ u v, u = add (add u v) 
   rw [V.add_assoc, V.add_neg, V.add_zero]
 
 
-lemma vspace_neg_eq_mul_neg_one (V : VectorSpace X K add smul) : ∀ v, V.neg v = smul (-1) v := by
-  intro v
-  have h : add v (smul (-1) v) = V.zero := by
-    nth_rewrite 1 [← V.smul_one v]
-    rw [← V.smul_distrib, K.add_comm, K.neg_add_cancel 1, smul_zero V]
-  symm
-  apply vspace_neg_unique V v (smul (-1) v) h
-
-
 theorem norm_is_metric (V : NormedSpace X add rsmul) : MetricSpace X (induced_metric V) where
   metric_nonneg := by
     intro x y
@@ -190,7 +181,7 @@ theorem norm_is_metric (V : NormedSpace X add rsmul) : MetricSpace X (induced_me
   metric_symm := by
     intro x y
     rw [induced_metric, induced_metric]
-    nth_rewrite 1 [vspace_neg_eq_mul_neg_one V.toVectorSpace y, V.add_comm]
+    nth_rewrite 1 [← smul_neg_one V.toVectorSpace y, V.add_comm]
     sorry
   metric_triangle := by
     intro x y z
@@ -214,18 +205,52 @@ lemma neg_norm_eq (V : NormedSpace X add rsmul) : ∀ x, V.norm (V.neg x) = V.no
 
 theorem reverse_triangle_inequality (V : NormedSpace X add rsmul) :
   ∀ x y, abs (V.norm x - V.norm y) ≤ V.norm (add x (V.neg y)) := by
-  intro x y
-  have h := V.norm_triangle (add x (V.neg y)) (y)
-  rw [V.add_assoc, V.add_comm (V.neg y) y, V.add_neg, V.add_zero] at h
-  have h' := add_le_add_right h (- V.norm y)
-  nth_rewrite 1 [add_comm] at h'
-  nth_rewrite 2 [add_comm] at h'
-  rw [add_assoc, add_neg_cancel, add_zero, ← sub_eq_add_neg] at h'
-  rw [abs_sub_le_iff]
-  constructor
-  · exact h'
-  · have h_sym := V.norm_triangle y (V.neg x)
-    have hn := neg_norm_eq V x
-    sorry
+    intro x y
+    have h := V.norm_triangle (add x (V.neg y)) (y)
+    rw [V.add_assoc, V.add_comm (V.neg y) y, V.add_neg, V.add_zero] at h
+    have h' := add_le_add_right h (- V.norm y)
+    nth_rewrite 1 [add_comm] at h'
+    nth_rewrite 2 [add_comm] at h'
+    rw [add_assoc, add_neg_cancel, add_zero, ← sub_eq_add_neg] at h'
+    rw [abs_sub_le_iff]
+    constructor
+    · exact h'
+    · have h_sym := V.norm_triangle y (V.neg x)
+      have hn := neg_norm_eq V x
+      sorry
+
+
+--
+
+
+lemma neg_distrib_add (V : VectorSpace X K add smul)
+  : ∀ u v, V.neg (add u v) = add (V.neg u) (V.neg v) := by
+    intro u v
+    rw [← smul_neg_one V (add u v), V.add_distrib, smul_neg_one V u, smul_neg_one V v]
+
+
+lemma translation_invariance_1 (V : NormedSpace X add rsmul)
+  : ∀ x y a, induced_metric V (add x a) (add y a) = induced_metric V x y := by
+    intro x y a
+    rw [induced_metric, induced_metric]
+    rw [neg_distrib_add]
+    rw [
+      V.add_assoc, V.add_comm (V.neg y) (V.neg a),
+      ← V.add_assoc a, V.add_neg, V.add_comm V.zero, V.add_zero
+    ]
+
+
+lemma neg_distrib_smul (V : VectorSpace X K add smul)
+  : ∀ a v, V.neg (smul a v) = smul a (V.neg v) := by
+    intro a v
+    rw [← smul_neg_one V (smul a v), V.smul_assoc, mul_comm, ← V.smul_assoc, smul_neg_one V]
+
+
+lemma translation_invariance_2 (V : NormedSpace X add rsmul)
+  : ∀ x y a, induced_metric V (rsmul a x) (rsmul a y) = abs a * induced_metric V x y := by
+    intro x y a
+    rw [induced_metric, induced_metric]
+    rw [neg_distrib_smul V.toVectorSpace, ← V.add_distrib, V.norm_scalar_mul]
+
 
 end FunctionalAnalysis
