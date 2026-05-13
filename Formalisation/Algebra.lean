@@ -180,6 +180,10 @@ theorem subgroupTest (H : Group Y op) (G : Group X op) (h : Y ⊆ X) : isSubgrou
         exact hidop
 
 
+structure AbelianGroup (X : Set α) (op : α → α → α) extends Group X op where
+  op_comm : ∀ a b, op a b = op b a
+
+
 def isAbelian (_ : Group X op) : Prop :=
   ∀ a b, op a b = op b a
 
