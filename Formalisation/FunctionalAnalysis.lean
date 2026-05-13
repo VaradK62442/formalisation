@@ -69,8 +69,15 @@ structure NormedSpace (X : Set α)
     norm_triangle : ∀ x y, norm (add x y) ≤ norm x + norm y
 
 
-def metric_on_norm (V : NormedSpace X add rsmul) : α → α → ℝ :=
+def induced_metric (V : NormedSpace X add rsmul) : α → α → ℝ :=
   fun x y => V.norm (add x (V.neg y))
+
+
+structure MetricSpace (X : Set α) (d : α → α → ℝ) where
+  metric_nonneg : ∀ x y, d x y ≥ 0
+  metric_zero : ∀ x y, d x y = 0 ↔ x = y
+  metric_symm : ∀ x y, d x y = d y x
+  metric_triangle : ∀ x y z, d x z ≤ d x y + d y z
 
 
 -- Exercise Sheet 1
@@ -131,14 +138,12 @@ def k_functions_vspace (K : Field β) :
     intro f
     ext x
     rw [K.add_zero]
-  add_neg := by
-    simp
+  add_neg := by simp
   smul_assoc := by
     intro a b h
     ext x
     rw [K.mul_assoc]
-  smul_one := by
-    simp
+  smul_one := by simp
   add_distrib := by
     intros
     ext
@@ -147,6 +152,54 @@ def k_functions_vspace (K : Field β) :
     intros
     ext
     rw [K.right_distrib]
+
+
+--
+
+
+lemma vspace_add_pm (V : VectorSpace X K add smul) : ∀ u v, u = add (add u v) (V.neg v) := by
+  intro u v
+  rw [V.add_assoc, V.add_neg, V.add_zero]
+
+
+lemma vspace_neg_eq_mul_neg_one (V : VectorSpace X K add smul) : ∀ v, V.neg v = smul (-1) v := by
+  intro v
+  have h : add v (smul (-1) v) = V.zero := by
+    nth_rewrite 1 [← V.smul_one v]
+    rw [← V.smul_distrib, K.add_comm, K.neg_add_cancel 1, smul_zero V]
+  symm
+  apply vspace_neg_unique V v (smul (-1) v) h
+
+
+theorem norm_is_metric (V : NormedSpace X add rsmul) : MetricSpace X (induced_metric V) where
+  metric_nonneg := by
+    intro x y
+    exact V.norm_nonneg (add x (V.neg y))
+  metric_zero := by
+    intro x y
+    rw [induced_metric, V.norm_zero]
+    apply Iff.intro
+    · intro h
+      rw [vspace_add_equiv V.toVectorSpace (add x (V.neg y)) V.zero y] at h
+      rw [V.add_comm, V.add_assoc] at h
+      nth_rewrite 2 [V.add_comm] at h
+      rw [V.add_neg, V.add_zero, V.add_zero] at h
+      exact h
+    · intro h
+      rw [h, V.add_neg]
+  metric_symm := by
+    intro x y
+    rw [induced_metric, induced_metric]
+    nth_rewrite 1 [vspace_neg_eq_mul_neg_one V.toVectorSpace y, V.add_comm]
+    sorry
+  metric_triangle := by
+    intro x y z
+    rw [induced_metric, induced_metric, induced_metric]
+    nth_rewrite 1 [vspace_add_pm V.toVectorSpace (V.neg z) y]
+    rw [V.add_assoc (V.neg z) y (V.neg y), V.add_comm y (V.neg y)]
+    rw [← V.add_assoc (V.neg z) (V.neg y) y, V.add_comm (V.neg z) (V.neg y)]
+    rw [V.add_assoc (V.neg y) (V.neg z) y, V.add_comm (V.neg z) y, ← V.add_assoc]
+    exact V.norm_triangle (add x (V.neg y)) (add y (V.neg z))
 
 
 -- Exercise Sheet 2
